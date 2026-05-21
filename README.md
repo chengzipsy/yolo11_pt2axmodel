@@ -170,16 +170,6 @@ python model_export/onnx2axmodel.py \
 
 ## 常见问题
 
-### GitHub Actions 找不到 workflow
-
-确认 workflow 文件是 `.yml` 或 `.yaml` 后缀。
-
-本仓库实际运行文件是：
-
-```text
-.github/workflows/yolo11_detect_onnx2axmodel.yml
-```
-
 ### Pulsar2 命令找不到
 
 说明 `pulsar2_image` 指向的 Docker 镜像里没有 `pulsar2`，或者镜像没有正确加载。
@@ -206,4 +196,3 @@ python model_export/onnx2axmodel.py \
 
 - GitHub-hosted runner 默认不包含 Pulsar2。
 - 校准图片应尽量接近模型真实使用场景，否则量化后精度可能下降。
-- 当前 workflow 是一个可运行框架，Pulsar2 镜像名称需要根据你的实际环境填写。
