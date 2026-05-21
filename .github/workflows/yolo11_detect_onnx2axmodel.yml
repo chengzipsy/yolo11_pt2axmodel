@@ -178,9 +178,10 @@ jobs:
               fi && \
               command -v pulsar2 && \
               pulsar2 version && \
-              python -m pip install --upgrade pip && \
-              python -m pip install onnx onnxsim && \
-              python model_export/onnx2axmodel.py \
+              /usr/local/bin/python -m ensurepip --upgrade && \
+              /usr/local/bin/python -m pip install --upgrade pip && \
+              /usr/local/bin/python -m pip install onnx onnxsim && \
+              /usr/local/bin/python model_export/onnx2axmodel.py \
               --onnx '/workspace/$ONNX_PATH' \
               --out-dir /workspace/model_export/build/axmodel \
               --model-name '${{ inputs.model_name }}' \

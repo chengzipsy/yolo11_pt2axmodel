@@ -7,6 +7,7 @@ import argparse
 import json
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 from gen_cali_images_tar import create_calibration_tar
@@ -154,7 +155,7 @@ def main() -> None:
     else:
         run(
             [
-                "python",
+                sys.executable,
                 str(Path(__file__).with_name("extract_onnx.py")),
                 str(onnx_path),
                 str(model_for_build),
