@@ -38,7 +38,7 @@ on:
       labels:
         description: "Comma-separated labels used when labels.txt does not exist"
         required: true
-        default: "class0"
+        default: "model_export/data_need/labels.txt"
       pulsar2_image:
         description: "Docker image containing pulsar2 and onnxsim"
         required: true
@@ -148,16 +148,16 @@ jobs:
             -v "$PWD:/workspace" \
             -w /workspace \
             "$PULSAR2_IMAGE" \
-            python model_export/onnx2axmodel.py \
-              --onnx "/workspace/$ONNX_PATH" \
+            -lc "python model_export/onnx2axmodel.py \
+              --onnx '/workspace/$ONNX_PATH' \
               --out-dir /workspace/model_export/build/axmodel \
-              --model-name "${{ inputs.model_name }}" \
+              --model-name '${{ inputs.model_name }}' \
               --calib-images /workspace/model_export/build/calib_images \
-              --calib-size "${{ inputs.calibration_size }}" \
-              --input-names "${{ inputs.input_names }}" \
-              --output-names "${{ inputs.output_names }}" \
-              --labels "${{ inputs.labels }}" \
-              --labels-file /workspace/model_export/build/labels.txt
+              --calib-size '${{ inputs.calibration_size }}' \
+              --input-names '${{ inputs.input_names }}' \
+              --output-names '${{ inputs.output_names }}' \
+              --labels '${{ inputs.labels }}' \
+              --labels-file /workspace/model_export/build/labels.txt"
 
       - name: Upload AXModel and MUD
         uses: actions/upload-artifact@v4
