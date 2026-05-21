@@ -77,11 +77,27 @@ jobs:
             --imgsz "${IMAGE_SIZE_ARGS[@]}" \
             --opset "${{ inputs.opset }}"
 
+      - name: Extract and simplify ONNX for Pulsar2
+        run: |
+          set -euo pipefail
+          mkdir -p model_export/build/pulsar_onnx
+          for ONNX_PATH in model_export/build/onnx/*.onnx; do
+            MODEL_STEM="$(basename "$ONNX_PATH" .onnx)"
+            EXTRACTED_PATH="model_export/build/pulsar_onnx/${MODEL_STEM}_extracted.onnx"
+            SIMPLIFIED_PATH="model_export/build/pulsar_onnx/${MODEL_STEM}.onnx"
+            python model_export/extract_onnx.py \
+              "$ONNX_PATH" \
+              "$EXTRACTED_PATH" \
+              "${{ inputs.input_names }}" \
+              "${{ inputs.output_names }}"
+            onnxsim "$EXTRACTED_PATH" "$SIMPLIFIED_PATH"
+          done
+
       - name: Upload ONNX artifact
         uses: actions/upload-artifact@v4
         with:
           name: yolo11-onnx
-          path: model_export/build/onnx/*.onnx
+          path: model_export/build/pulsar_onnx/*.onnx
           if-no-files-found: error
 
       - name: Upload calibration images
@@ -164,9 +180,7 @@ jobs:
             -v "$PWD:/workspace" \
             -w /workspace \
             "$PULSAR2_IMAGE" \
-            -lc "set -euo pipefail && \
-              [ -f /etc/profile ] && source /etc/profile || true && \
-              [ -f ~/.bashrc ] && source ~/.bashrc || true && \
+            -ic "set -euo pipefail && \
               export PATH=/usr/local/bin/.venv/bin:/root/.local/bin:/opt/pulsar2/bin:\$PATH && \
               if ! command -v pulsar2 >/dev/null 2>&1; then \
                 PULSAR2_BIN=\$(find / -type f -name pulsar2 -perm /111 2>/dev/null | head -n 1); \
@@ -178,22 +192,7 @@ jobs:
               fi && \
               command -v pulsar2 && \
               pulsar2 version && \
-              PYTHON_BIN='' && \
-              for candidate in /usr/bin/python3 /usr/local/bin/python3 /usr/local/bin/python; do \
-                if [ -x \"\$candidate\" ] && \"\$candidate\" -c 'import sys; raise SystemExit(\"/.venv/\" in sys.executable)' && \"\$candidate\" -m ensurepip --version >/dev/null 2>&1; then \
-                  PYTHON_BIN=\"\$candidate\"; \
-                  break; \
-                fi; \
-              done && \
-              if [ -z \"\$PYTHON_BIN\" ]; then \
-                echo 'No Python with ensurepip found in container'; \
-                exit 1; \
-              fi && \
-              \"\$PYTHON_BIN\" -c 'import sys; print(sys.executable)' && \
-              \"\$PYTHON_BIN\" -m ensurepip --upgrade && \
-              \"\$PYTHON_BIN\" -m pip install --upgrade pip && \
-              \"\$PYTHON_BIN\" -m pip install onnx onnxsim && \
-              \"\$PYTHON_BIN\" model_export/onnx2axmodel.py \
+              python model_export/onnx2axmodel.py \
               --onnx '/workspace/$ONNX_PATH' \
               --out-dir /workspace/model_export/build/axmodel \
               --model-name '${{ inputs.model_name }}' \
@@ -202,7 +201,9 @@ jobs:
               --input-names '${{ inputs.input_names }}' \
               --output-names '${{ inputs.output_names }}' \
               --labels '${{ inputs.labels }}' \
-              --labels-file /workspace/model_export/build/labels.txt"
+              --labels-file /workspace/model_export/build/labels.txt \
+              --no-extract \
+              --no-simplify"
 
       - name: Upload AXModel and MUD
         uses: actions/upload-artifact@v4

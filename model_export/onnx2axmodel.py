@@ -149,10 +149,10 @@ def main() -> None:
     if not output_names:
         raise SystemExit("At least one output tensor name is required.")
 
-    model_for_build = work_dir / f"{model_name}_extracted.onnx"
     if args.no_extract:
-        shutil.copy2(onnx_path, model_for_build)
+        model_for_build = onnx_path
     else:
+        model_for_build = work_dir / f"{model_name}_extracted.onnx"
         run(
             [
                 sys.executable,
@@ -164,10 +164,10 @@ def main() -> None:
             ]
         )
 
-    simplified_model = work_dir / f"{model_name}.onnx"
     if args.no_simplify:
-        shutil.copy2(model_for_build, simplified_model)
+        simplified_model = model_for_build
     else:
+        simplified_model = work_dir / f"{model_name}.onnx"
         run(["onnxsim", str(model_for_build), str(simplified_model)])
 
     calib_tar = create_calibration_tar(
