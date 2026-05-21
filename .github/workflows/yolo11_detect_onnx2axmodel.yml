@@ -167,7 +167,7 @@ jobs:
             -lc "set -euo pipefail && \
               [ -f /etc/profile ] && source /etc/profile || true && \
               [ -f ~/.bashrc ] && source ~/.bashrc || true && \
-              export PATH=/root/.local/bin:/opt/pulsar2/bin:\$PATH && \
+              export PATH=/usr/local/bin/.venv/bin:/root/.local/bin:/opt/pulsar2/bin:\$PATH && \
               if ! command -v pulsar2 >/dev/null 2>&1; then \
                 PULSAR2_BIN=\$(find / -type f -name pulsar2 -perm /111 2>/dev/null | head -n 1); \
                 if [ -z \"\$PULSAR2_BIN\" ]; then \
@@ -179,8 +179,8 @@ jobs:
               command -v pulsar2 && \
               pulsar2 version && \
               PYTHON_BIN='' && \
-              for candidate in /usr/bin/python3 /usr/local/bin/python3 /usr/local/bin/python python3 python; do \
-                if command -v \"\$candidate\" >/dev/null 2>&1 && \"\$candidate\" -m ensurepip --version >/dev/null 2>&1; then \
+              for candidate in /usr/bin/python3 /usr/local/bin/python3 /usr/local/bin/python; do \
+                if [ -x \"\$candidate\" ] && \"\$candidate\" -c 'import sys; raise SystemExit(\"/.venv/\" in sys.executable)' && \"\$candidate\" -m ensurepip --version >/dev/null 2>&1; then \
                   PYTHON_BIN=\"\$candidate\"; \
                   break; \
                 fi; \
