@@ -14,6 +14,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Inspect ONNX output tensor ranks.")
     parser.add_argument("onnx_path")
     parser.add_argument("--output", required=True)
+    parser.add_argument("--require-rank", type=int, default=0)
     return parser.parse_args()
 
 
@@ -44,6 +45,17 @@ def main() -> None:
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(json.dumps(outputs, indent=2) + "\n", encoding="utf-8")
     print(json.dumps(outputs, indent=2))
+    if args.require_rank:
+        bad_outputs = {
+            name: info
+            for name, info in outputs.items()
+            if info["rank"] != args.require_rank
+        }
+        if bad_outputs:
+            raise SystemExit(
+                f"Expected all ONNX outputs to be rank {args.require_rank}, "
+                f"but got: {json.dumps(bad_outputs, indent=2)}"
+            )
 
 
 if __name__ == "__main__":

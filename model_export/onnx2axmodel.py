@@ -42,7 +42,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--no-extract", action="store_true")
     parser.add_argument("--no-simplify", action="store_true")
     parser.add_argument("--output-metadata", default="")
-    parser.add_argument("--output-perm-mode", choices=["auto", "always", "none"], default="auto")
+    parser.add_argument("--output-perm-mode", choices=["strict", "auto", "always", "none"], default="strict")
     return parser.parse_args()
 
 
@@ -79,6 +79,14 @@ def read_output_ranks(metadata_path: str) -> dict[str, int]:
 
 
 def should_permute_output(output_name: str, output_ranks: dict[str, int], mode: str) -> bool:
+    if mode == "strict":
+        rank = output_ranks.get(output_name)
+        if rank != 4:
+            raise SystemExit(
+                f"Output {output_name!r} rank is {rank}; tutorial mode requires rank 4 outputs. "
+                "Check output_names or ONNX export settings."
+            )
+        return True
     if mode == "always":
         return True
     if mode == "none":

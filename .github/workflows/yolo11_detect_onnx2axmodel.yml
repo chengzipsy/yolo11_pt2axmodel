@@ -32,9 +32,9 @@ on:
         required: true
         default: "images"
       output_names:
-        description: "YOLO11 quantization output tensor names"
+        description: "YOLO11 quantization output tensor names, or auto for cv2/cv3 6-output mode"
         required: true
-        default: "/model.23/Concat_output_0,/model.23/Concat_1_output_0,/model.23/Concat_2_output_0"
+        default: "auto"
       labels:
         description: "Comma-separated labels used when labels.txt does not exist"
         required: true
@@ -87,15 +87,27 @@ jobs:
             MODEL_STEM="$(basename "$ONNX_PATH" .onnx)"
             EXTRACTED_PATH="model_export/build/pulsar_onnx_tmp/${MODEL_STEM}_extracted.onnx"
             SIMPLIFIED_PATH="model_export/build/pulsar_onnx/${MODEL_STEM}.onnx"
+            OUTPUT_NAMES="${{ inputs.output_names }}"
+            if [ "$OUTPUT_NAMES" = "auto" ]; then
+              python model_export/find_yolo11_reshape_outputs.py \
+                "$ONNX_PATH" \
+                --output "model_export/build/onnx_metadata/${MODEL_STEM}.outputs.txt" \
+                --json-output "model_export/build/onnx_metadata/${MODEL_STEM}.candidates.json"
+              OUTPUT_NAMES="$(cat "model_export/build/onnx_metadata/${MODEL_STEM}.outputs.txt")"
+            else
+              echo "$OUTPUT_NAMES" > "model_export/build/onnx_metadata/${MODEL_STEM}.outputs.txt"
+            fi
+            echo "Using output names: $OUTPUT_NAMES"
             python model_export/extract_onnx.py \
               "$ONNX_PATH" \
               "$EXTRACTED_PATH" \
               "${{ inputs.input_names }}" \
-              "${{ inputs.output_names }}"
+              "$OUTPUT_NAMES"
             onnxsim "$EXTRACTED_PATH" "$SIMPLIFIED_PATH"
             python model_export/inspect_onnx_outputs.py \
               "$SIMPLIFIED_PATH" \
-              --output "model_export/build/onnx_metadata/${MODEL_STEM}.outputs.json"
+              --output "model_export/build/onnx_metadata/${MODEL_STEM}.outputs.json" \
+              --require-rank 4
           done
 
       - name: Upload ONNX artifact
@@ -109,7 +121,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: yolo11-onnx-metadata
-          path: model_export/build/onnx_metadata/*.json
+          path: |
+            model_export/build/onnx_metadata/*.json
+            model_export/build/onnx_metadata/*.txt
           if-no-files-found: error
 
       - name: Upload calibration images
@@ -196,6 +210,13 @@ jobs:
           fi
           ONNX_STEM="$(basename "$ONNX_PATH" .onnx)"
           OUTPUT_METADATA="/workspace/model_export/build/onnx_metadata/${ONNX_STEM}.outputs.json"
+          OUTPUT_NAMES_PATH="model_export/build/onnx_metadata/${ONNX_STEM}.outputs.txt"
+          if [ ! -s "$OUTPUT_NAMES_PATH" ]; then
+            echo "No output names file found: $OUTPUT_NAMES_PATH"
+            find model_export/build/onnx_metadata -maxdepth 2 -type f -print
+            exit 1
+          fi
+          OUTPUT_NAMES="$(cat "$OUTPUT_NAMES_PATH")"
           docker run --rm --privileged \
             -v "$PWD:/workspace" \
             -w /workspace \
@@ -219,7 +240,7 @@ jobs:
               --calib-images /workspace/model_export/build/calib_images \
               --calib-size '${{ inputs.calibration_size }}' \
               --input-names '${{ inputs.input_names }}' \
-              --output-names '${{ inputs.output_names }}' \
+              --output-names '$OUTPUT_NAMES' \
               --labels '${{ inputs.labels }}' \
               --labels-file /workspace/model_export/build/labels.txt \
               --output-metadata '$OUTPUT_METADATA' \
