@@ -57,7 +57,7 @@ model_export/
 - `calib_images_dir`：校准图片目录，默认是 `model_export/data_need/calib_images`。
 - `model_name`：输出模型基础名称，默认是 `yolo11_detect`。
 - `image_size`：YOLO 导出 ONNX 时的输入尺寸，默认是 `640`。
-- `opset`：ONNX opset 版本，默认是 `12`。
+- `opset`：ONNX opset 版本，默认是 `17`，和 Sipeed YOLO11 教程保持一致。
 - `calibration_size`：量化时使用的校准图片数量，默认是 `100`。
 - `input_names`：ONNX 输入 tensor 名称，默认是 `images`。
 - `output_names`：YOLO11 检测输出 tensor 名称，用于 ONNX 截取和 Pulsar2 量化配置。
@@ -151,7 +151,7 @@ python model_export/pt2onnx.py \
   --pt-glob "model_export/data_need/*.pt" \
   --out-dir model_export/build/onnx \
   --imgsz 640 \
-  --opset 12
+  --opset 17
 ```
 
 如果你本地已经有 Pulsar2 环境，可以直接运行 ONNX 转 AXModel：

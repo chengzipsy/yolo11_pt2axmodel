@@ -20,7 +20,7 @@ def parse_args() -> argparse.Namespace:
         default=[640],
         help="Export image size. Use one value for square input, or two values as height width.",
     )
-    parser.add_argument("--opset", type=int, default=12)
+    parser.add_argument("--opset", type=int, default=17)
     parser.add_argument("--dynamic", action="store_true")
     parser.add_argument("--no-simplify", action="store_true")
     return parser.parse_args()

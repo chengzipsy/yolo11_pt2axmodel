@@ -41,6 +41,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--labels-file", default="")
     parser.add_argument("--no-extract", action="store_true")
     parser.add_argument("--no-simplify", action="store_true")
+    parser.add_argument("--output-metadata", default="")
+    parser.add_argument("--output-perm-mode", choices=["auto", "always", "none"], default="auto")
     return parser.parse_args()
 
 
@@ -62,7 +64,45 @@ def read_labels(args: argparse.Namespace) -> str:
     return args.labels
 
 
-def write_config(config_path: Path, mode: str, input_name: str, output_names: list[str], tar_path: Path, size: int) -> None:
+def read_output_ranks(metadata_path: str) -> dict[str, int]:
+    if not metadata_path:
+        return {}
+    path = Path(metadata_path)
+    if not path.exists():
+        return {}
+    data = json.loads(path.read_text(encoding="utf-8"))
+    return {
+        name: int(info["rank"])
+        for name, info in data.items()
+        if isinstance(info, dict) and "rank" in info
+    }
+
+
+def should_permute_output(output_name: str, output_ranks: dict[str, int], mode: str) -> bool:
+    if mode == "always":
+        return True
+    if mode == "none":
+        return False
+    return output_ranks.get(output_name) == 4
+
+
+def write_config(
+    config_path: Path,
+    mode: str,
+    input_name: str,
+    output_names: list[str],
+    tar_path: Path,
+    size: int,
+    output_ranks: dict[str, int],
+    output_perm_mode: str,
+) -> None:
+    output_processors = []
+    for output_name in output_names:
+        processor = {"tensor_name": output_name}
+        if should_permute_output(output_name, output_ranks, output_perm_mode):
+            processor["dst_perm"] = [0, 2, 3, 1]
+        output_processors.append(processor)
+
     config = {
         "model_type": "ONNX",
         "npu_mode": mode,
@@ -90,10 +130,7 @@ def write_config(config_path: Path, mode: str, input_name: str, output_names: li
                 "csc_mode": "NoCSC",
             }
         ],
-        "output_processors": [
-            {"tensor_name": output_name, "dst_perm": [0, 2, 3, 1]}
-            for output_name in output_names
-        ],
+        "output_processors": output_processors,
         "compiler": {
             "check": 3,
             "check_mode": "CheckOutput",
@@ -176,6 +213,7 @@ def main() -> None:
         work_dir / "tmp_images" / "images.tar",
         seed=2026,
     )
+    output_ranks = read_output_ranks(args.output_metadata)
 
     built_modes: list[str] = []
     for mode in args.npu_modes:
@@ -185,7 +223,16 @@ def main() -> None:
             shutil.rmtree(build_dir)
         build_dir.mkdir(parents=True)
         config_path = work_dir / f"yolo11_build_config_{mode.lower()}.json"
-        write_config(config_path, mode, input_names[0], output_names, calib_tar, args.calib_size)
+        write_config(
+            config_path,
+            mode,
+            input_names[0],
+            output_names,
+            calib_tar,
+            args.calib_size,
+            output_ranks,
+            args.output_perm_mode,
+        )
         run(
             [
                 "pulsar2",

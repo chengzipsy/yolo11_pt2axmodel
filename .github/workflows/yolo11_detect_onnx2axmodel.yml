@@ -22,7 +22,7 @@ on:
       opset:
         description: "ONNX opset"
         required: true
-        default: "12"
+        default: "17"
       calibration_size:
         description: "Number of calibration images"
         required: true
@@ -81,9 +81,11 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p model_export/build/pulsar_onnx
+          mkdir -p model_export/build/pulsar_onnx_tmp
+          mkdir -p model_export/build/onnx_metadata
           for ONNX_PATH in model_export/build/onnx/*.onnx; do
             MODEL_STEM="$(basename "$ONNX_PATH" .onnx)"
-            EXTRACTED_PATH="model_export/build/pulsar_onnx/${MODEL_STEM}_extracted.onnx"
+            EXTRACTED_PATH="model_export/build/pulsar_onnx_tmp/${MODEL_STEM}_extracted.onnx"
             SIMPLIFIED_PATH="model_export/build/pulsar_onnx/${MODEL_STEM}.onnx"
             python model_export/extract_onnx.py \
               "$ONNX_PATH" \
@@ -91,6 +93,9 @@ jobs:
               "${{ inputs.input_names }}" \
               "${{ inputs.output_names }}"
             onnxsim "$EXTRACTED_PATH" "$SIMPLIFIED_PATH"
+            python model_export/inspect_onnx_outputs.py \
+              "$SIMPLIFIED_PATH" \
+              --output "model_export/build/onnx_metadata/${MODEL_STEM}.outputs.json"
           done
 
       - name: Upload ONNX artifact
@@ -98,6 +103,13 @@ jobs:
         with:
           name: yolo11-onnx
           path: model_export/build/pulsar_onnx/*.onnx
+          if-no-files-found: error
+
+      - name: Upload ONNX metadata artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: yolo11-onnx-metadata
+          path: model_export/build/onnx_metadata/*.json
           if-no-files-found: error
 
       - name: Upload calibration images
@@ -127,6 +139,12 @@ jobs:
         with:
           name: yolo11-onnx
           path: model_export/build/onnx
+
+      - name: Download ONNX metadata artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: yolo11-onnx-metadata
+          path: model_export/build/onnx_metadata
 
       - name: Download calibration images
         uses: actions/download-artifact@v4
@@ -176,6 +194,8 @@ jobs:
             echo "No ONNX artifact found"
             exit 1
           fi
+          ONNX_STEM="$(basename "$ONNX_PATH" .onnx)"
+          OUTPUT_METADATA="/workspace/model_export/build/onnx_metadata/${ONNX_STEM}.outputs.json"
           docker run --rm --privileged \
             -v "$PWD:/workspace" \
             -w /workspace \
@@ -202,6 +222,7 @@ jobs:
               --output-names '${{ inputs.output_names }}' \
               --labels '${{ inputs.labels }}' \
               --labels-file /workspace/model_export/build/labels.txt \
+              --output-metadata '$OUTPUT_METADATA' \
               --no-extract \
               --no-simplify"
 
