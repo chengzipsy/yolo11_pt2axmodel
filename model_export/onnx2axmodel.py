@@ -98,10 +98,8 @@ def write_config(
 ) -> None:
     output_processors = []
     for output_name in output_names:
-        processor = {"tensor_name": output_name}
         if should_permute_output(output_name, output_ranks, output_perm_mode):
-            processor["dst_perm"] = [0, 2, 3, 1]
-        output_processors.append(processor)
+            output_processors.append({"tensor_name": output_name, "dst_perm": [0, 2, 3, 1]})
 
     config = {
         "model_type": "ONNX",
@@ -130,13 +128,17 @@ def write_config(
                 "csc_mode": "NoCSC",
             }
         ],
-        "output_processors": output_processors,
         "compiler": {
             "check": 3,
             "check_mode": "CheckOutput",
             "check_cosine_simularity": 0.9,
         },
     }
+    if output_processors:
+        config["output_processors"] = output_processors
+    print(f"Output ranks: {output_ranks}")
+    print(f"Pulsar2 config ({mode}):")
+    print(json.dumps(config, indent=2))
     config_path.write_text(json.dumps(config, indent=2) + "\n", encoding="utf-8")
 
 
