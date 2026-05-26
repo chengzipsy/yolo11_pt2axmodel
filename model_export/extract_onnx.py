@@ -7,6 +7,8 @@ import argparse
 
 import onnx
 
+from find_yolo11_reshape_outputs import find_candidates
+
 
 def split_names(value: str) -> list[str]:
     return [item.strip() for item in value.split(",") if item.strip()]
@@ -24,7 +26,21 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     args = parse_args()
     input_names = split_names(args.input_names)
-    output_names = split_names(args.output_names)
+    if args.output_names.strip().lower() == "auto":
+        model = onnx.load(args.input_path)
+        candidates = [
+            item
+            for item in find_candidates(model)
+            if int(item["branch_rank"]) in (0, 1)
+        ][:6]
+        output_names = [str(item["name"]) for item in candidates]
+        print("Auto-selected output names:")
+        for item in candidates:
+            print(f"  {item['name']} shape={item['input_shape']}")
+        if len(output_names) != 6:
+            raise SystemExit(f"Expected 6 auto output names, got {len(output_names)}")
+    else:
+        output_names = split_names(args.output_names)
     if not input_names:
         raise SystemExit("input_names cannot be empty")
     if not output_names:
