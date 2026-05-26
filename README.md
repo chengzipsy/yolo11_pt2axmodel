@@ -1,4 +1,4 @@
-# YOLO11 Detect 转 MaixCAM2 AXModel 使用说明
+# YOLO11 Detect 转 MaixCAM2 AXModel 使用说明（未完成 最近懒得搞）
 
 这个仓库提供了一套 GitHub Actions workflow，用来把 YOLO11 检测模型的 `.pt` 文件转换成 MaixCAM2 可用的 `.axmodel` 文件。
 
