@@ -31,7 +31,7 @@ path = model.export(
     imgsz=[input_height, input_width],
     dynamic=False,
     simplify=True,
-    opset=12
+    opset=17
 )
 
 print(f"✅ 导出成功！文件路径: {path}")
