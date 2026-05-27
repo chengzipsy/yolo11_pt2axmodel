@@ -39,6 +39,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--npu-modes", nargs="+", default=["NPU1", "NPU2"], choices=sorted(MODE_SUFFIX))
     parser.add_argument("--labels", default="class0")
     parser.add_argument("--labels-file", default="")
+    parser.add_argument("--model-type", default="yolo11", choices=["yolo11", "yolo26"])
     parser.add_argument("--no-extract", action="store_true")
     parser.add_argument("--no-simplify", action="store_true")
     parser.add_argument("--output-metadata", default="")
@@ -150,7 +151,7 @@ def write_config(
     config_path.write_text(json.dumps(config, indent=2) + "\n", encoding="utf-8")
 
 
-def write_mud(out_dir: Path, model_name: str, labels: str, built_modes: list[str]) -> None:
+def write_mud(out_dir: Path, model_name: str, labels: str, built_modes: list[str], model_type: str) -> None:
     lines = [
         "[basic]",
         "type = axmodel",
@@ -162,7 +163,7 @@ def write_mud(out_dir: Path, model_name: str, labels: str, built_modes: list[str
         [
             "",
             "[extra]",
-            "model_type = yolo11",
+            f"model_type = {model_type}",
             "type=detector",
             "input_type = rgb",
             f"labels = {labels}",
@@ -265,7 +266,7 @@ def main() -> None:
         print(f"Wrote {target}")
         built_modes.append(mode)
 
-    write_mud(out_dir, model_name, read_labels(args), built_modes)
+    write_mud(out_dir, model_name, read_labels(args), built_modes, args.model_type)
 
 
 if __name__ == "__main__":

@@ -86,7 +86,8 @@ jobs:
           for ONNX_PATH in model_export/build/onnx/*.onnx; do
             MODEL_STEM="$(basename "$ONNX_PATH" .onnx)"
             EXTRACTED_PATH="model_export/build/pulsar_onnx_tmp/${MODEL_STEM}_extracted.onnx"
-            SIMPLIFIED_PATH="model_export/build/pulsar_onnx/${MODEL_STEM}.onnx"
+            SIMPLIFIED_PATH="model_export/build/pulsar_onnx_tmp/${MODEL_STEM}_simplified.onnx"
+            RENAMED_PATH="model_export/build/pulsar_onnx/${MODEL_STEM}.onnx"
             OUTPUT_NAMES="${{ inputs.output_names }}"
             if [ "$OUTPUT_NAMES" = "auto" ]; then
               python model_export/find_yolo11_reshape_outputs.py \
@@ -104,8 +105,13 @@ jobs:
               "${{ inputs.input_names }}" \
               "$OUTPUT_NAMES"
             onnxsim "$EXTRACTED_PATH" "$SIMPLIFIED_PATH"
-            python model_export/inspect_onnx_outputs.py \
+            python model_export/rename_yolo11_outputs_to_yolo26.py \
               "$SIMPLIFIED_PATH" \
+              "$RENAMED_PATH" \
+              --names-output "model_export/build/onnx_metadata/${MODEL_STEM}.outputs.txt" \
+              --map-output "model_export/build/onnx_metadata/${MODEL_STEM}.rename.json"
+            python model_export/inspect_onnx_outputs.py \
+              "$RENAMED_PATH" \
               --output "model_export/build/onnx_metadata/${MODEL_STEM}.outputs.json" \
               --require-rank 4
           done
@@ -243,6 +249,7 @@ jobs:
               --output-names '$OUTPUT_NAMES' \
               --labels '${{ inputs.labels }}' \
               --labels-file /workspace/model_export/build/labels.txt \
+              --model-type yolo26 \
               --output-metadata '$OUTPUT_METADATA' \
               --no-extract \
               --no-simplify"
