@@ -11,6 +11,13 @@
 ```
 
 注意：需要使用能导出上述节点的 Ultralytics 环境。当前 workflow 固定使用 `ultralytics==8.3.39`、`torch==2.5.1`，避免新版 PyTorch ONNX exporter 改变 graph 结构。
+## 实测建议
+
+其实建议直接使用yolo26 按照Sipeed的教程转换 我现阶段还没有尝试yolo26的部署 
+但是他文档有关yolo11的转换流程都是根据他写文档时ultralytics，torch，onnx等依赖的版本编写的
+而现在最新版的ultralytics等依赖中 yolo11在pt转onnx中的输出节点与sipeed文档中的yolo26结构是相似的 都是3个bbox和3个cls
+这导致最新的依赖中如果按照教程的三个concat节点转换会出问题 因为这三个concat前经过了一个reshape导致四通道变为三通道
+
 
 ## 目录结构
 
@@ -153,32 +160,27 @@ https://huggingface.co/AXERA-TECH/Pulsar2/resolve/main/6.0/ax_pulsar2_6.0.tar.gz
 MaixPy 代码示例：
 
 ```python
-from maix import camera, display, image, nn, app
+from maix import camera, display, image, nn, app, time
 
-detector = nn.YOLO11(model="/root/models/train15_2026.5.21/yolo11_detect.mud", dual_buff=True)
-cam = camera.Camera(640, 480, image.Format.FMT_RGB888)
+detector = nn.YOLO11(model="/root/models/train15_2026.5.21/yolo11_detect.mud", dual_buff = True)
+
+cam = camera.Camera(detector.input_width(), detector.input_height(), detector.input_format(),fps=-1,buff_num=1)
 disp = display.Display()
 
 while not app.need_exit():
     img = cam.read()
-    objs = detector.detect(img, conf_th=0.5, iou_th=0.45)
+
+    objs = detector.detect(img, conf_th = 0.5, iou_th = 0.45)
     for obj in objs:
-        img.draw_rect(obj.x, obj.y, obj.w, obj.h, image.Color.from_rgb(255, 0, 0), 2)
-        img.draw_string(obj.x, obj.y, f"{detector.labels[obj.class_id]} {obj.score:.2f}", image.Color.from_rgb(255, 0, 0))
+        img.draw_rect(obj.x, obj.y, obj.w, obj.h, color = image.COLOR_RED)
+        msg = f'{detector.labels[obj.class_id]}: {obj.score:.2f}'
+        img.draw_string(obj.x, obj.y, msg, color = image.COLOR_RED,scale=3,thickness=3)
+    fps = time.fps()
+    img.draw_string(10, 10, f"fps: {fps:.02f}", color = image.COLOR_RED,scale=3,thickness=3)
     disp.show(img)
 ```
 
 如果 `detector.detect()` 直接退出、没有 Python traceback，优先确认 MaixCAM2 系统镜像是否为较新版本。实际测试中，重新刷 MaixCAM 镜像后 `nn.YOLO11` 可以正常运行。
-
-## 调试脚本
-
-`nn_forward.py` 是手动 `nn.NN` forward 和自定义后处理调试脚本，用来查看 AXModel 输出 shape、验证模型是否能正常 forward。
-
-如果只是正常部署，优先使用内置：
-
-```python
-nn.YOLO11(...)
-```
 
 因为内置后处理速度更高。
 
