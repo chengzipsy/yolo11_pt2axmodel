@@ -14,8 +14,11 @@
 ## 实测建议
 
 其实建议直接使用yolo26 按照Sipeed的教程转换 我现阶段还没有尝试yolo26的部署 
+
 但是他文档有关yolo11的转换流程都是根据他写文档时ultralytics，torch，onnx等依赖的版本编写的
+
 而现在最新版的ultralytics等依赖中 yolo11在pt转onnx中的输出节点与sipeed文档中的yolo26结构是相似的 都是3个bbox和3个cls
+
 这导致最新的依赖中如果按照教程的三个concat节点转换会出问题 因为这三个concat前经过了一个reshape导致四通道变为三通道
 
 
