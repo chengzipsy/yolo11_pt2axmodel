@@ -141,13 +141,12 @@ yolo11_detect.mud
 pulsar2:6.0
 ```
 
-workflow 会从 Hugging Face 下载并缓存：
+workflow 会从 Hugging Face 下载：
 
 ```text
 https://huggingface.co/AXERA-TECH/Pulsar2/resolve/main/6.0/ax_pulsar2_6.0.tar.gz?download=true
 ```
 
-第一次运行会比较慢，后续会从 GitHub Actions cache 恢复 tar 包。
 
 ## 部署到 MaixCAM2
 
@@ -185,7 +184,6 @@ while not app.need_exit():
 
 如果 `detector.detect()` 直接退出、没有 Python traceback，优先确认 MaixCAM2 系统镜像是否为较新版本。实际测试中，重新刷 MaixCAM 镜像后 `nn.YOLO11` 可以正常运行。
 
-因为内置后处理速度更高。
 
 ## 常见问题
 
